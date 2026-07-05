@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appconfig>
+    <application>
+        <name>Slack.app</name>
+        <version>latest</version>
+        <platform>macOS</platform>
+        <autopromote>
+            <helper>
+                <name>Slack Helper</name>
+                <approve>true</approve>
+            </helper>
+        </autopromote>
+        <permissions>
+            <allow>
+                <helper>com.Slack.helper</helper>
+            </allow>
+        </permissions>
+    </application>
+</appconfig>

@@ -1,0 +1,44 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and temp files
+*.log
+*.tmp
+tmp/
+
+# Secrets / credentials (NEVER commit these)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+credentials.*
+*oauth*token*
+*service-account*.json
+
+# Binaries / installers (use a release asset or artifact store, not the repo)
+*.pkg
+*.dmg
+*.exe
+*.msi
+
+# Build / dependency / lint artifacts
+node_modules/
+build/
+dist/
+__pycache__/
+*.pyc
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/

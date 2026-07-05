@@ -1,53 +1,65 @@
-#!/bin/bash
-# script checks for Rosetta install for mix of Intel/ARM devices
-# not sure of original author but have edited this script to suit my environment
+#!/usr/bin/env zsh
+# Based on an open-source Homebrew bootstrap script, adapted for internal use.
+
 # Logging config
 LOG_NAME="homebrew_install.log"
 LOG_DIR="/Library/Logs"
 LOG_PATH="$LOG_DIR/$LOG_NAME"
+MAX_LOG_SIZE_MB=10
+MAX_LOG_FILES=5
 
-#Edit and deploy at your own risk below this line unless you want this script to end up like Anakin on Mustafar
-
+# Enhanced logging function with rotation and error handling
 logging() {
-    # Logging function
-    #
-    # Takes in a log level and log string and logs to /Library/Logs/$script_name if a LOG_PATH
-    # constant variable is not found. Will set the log level to INFO if the first built-in $1 is
-    # passed as an empty string.
-    #
     # Args:
     #   $1: Log level. Examples "info", "warning", "debug", "error"
     #   $2: Log statement in string format
-    #
-    # Examples:
-    #   logging "" "Your info log statement here ..."
-    #   logging "warning" "Your warning log statement here ..."
-    log_level=$(printf "$1" | /usr/bin/tr '[:lower:]' '[:upper:]')
-    log_statement="$2"
-    script_name="$(/usr/bin/basename $0)"
+    local log_level script_name prefix log_statement current_size
+    
+    # Ensure log directory exists and is writable
+    if ! /bin/mkdir -p "$LOG_DIR" 2>/dev/null; then
+        /bin/echo "ERROR: Cannot create log directory $LOG_DIR" >&2
+        return 1
+    fi
+    
+    # Convert log level to uppercase, defaulting to INFO
+    log_level=$(printf "%s" "${1:-INFO}" | /usr/bin/tr '[:lower:]' '[:upper:]')
+    log_statement="${2:-}"
+    script_name="$(/usr/bin/basename "$0")"
     prefix=$(/bin/date +"[%b %d, %Y %Z %T $log_level]:")
-
-    # see if a LOG_PATH has been set
-    if [[ -z "${LOG_PATH}" ]]; then
-        LOG_PATH="/Library/Logs/${script_name}"
+    
+    # Rotate log if needed
+    if [[ -f "$LOG_PATH" ]]; then
+        current_size=$(/usr/bin/stat -f %z "$LOG_PATH" 2>/dev/null || echo "0")
+        if (( current_size > MAX_LOG_SIZE_MB * 1024 * 1024 )); then
+            # Rotate existing logs
+            for (( i=MAX_LOG_FILES-1; i>=1; i-- )); do
+                if [[ -f "${LOG_PATH}.$i" ]]; then
+                    /bin/mv "${LOG_PATH}.$i" "${LOG_PATH}.$((i+1))" 2>/dev/null
+                fi
+            done
+            /bin/mv "$LOG_PATH" "${LOG_PATH}.1" 2>/dev/null
+        fi
     fi
-
-    if [[ -z $log_level   ]]; then
-        # If the first builtin is an empty string set it to log level INFO
-        log_level="INFO"
+    
+    # Create log file if it doesn't exist
+    if ! /usr/bin/touch "$LOG_PATH" 2>/dev/null; then
+        /bin/echo "ERROR: Cannot create/access log file $LOG_PATH" >&2
+        return 1
     fi
-
-    if [[ -z $log_statement   ]]; then
-        # The statement was piped to the log function from another command.
-        log_statement=""
+    
+    # Ensure log file is writable
+    if ! /bin/chmod 644 "$LOG_PATH" 2>/dev/null; then
+        /bin/echo "WARNING: Cannot set permissions on $LOG_PATH" >&2
     fi
-
-    # echo the same log statement to stdout
+    
+    # Echo to stdout (properly escaped)
     /bin/echo "$prefix $log_statement"
-
-    # send log statement to log file
-    printf "%s %s\n" "$prefix" "$log_statement" >>"$LOG_PATH"
-
+    
+    # Write to log file (properly escaped)
+    printf "%s %s\n" "$prefix" "$log_statement" >>"$LOG_PATH" 2>/dev/null || {
+        /bin/echo "ERROR: Failed to write to log file $LOG_PATH" >&2
+        return 1
+    }
 }
 
 check_brew_install_status() {
@@ -211,11 +223,11 @@ create_brew_environment() {
 
 reset_source() {
     # Reset the shell source so that brew doctor will find brew in the user's PATH
-    if [[ "/Users/$current_user/.zshrc" ]]; then
+    if [[ -f "/Users/$current_user/.zshrc" ]]; then
         /usr/bin/su - "$current_user" -c source "/Users/$current_user/.zshrc" | /usr/bin/tee -a "${LOG_PATH}"
     fi
 
-    if [[ "/Users/$current_user/.bashrc" ]]; then
+    if [[ -f "/Users/$current_user/.bashrc" ]]; then
         /usr/bin/su - "$current_user" -c source "/Users/$current_user/.bashrc" | /usr/bin/tee -a "${LOG_PATH}"
     fi
 
@@ -252,10 +264,10 @@ brew_doctor() {
 }
 
 ###################################################################################################
-########################### OBI-WAN HAS THE HIGH GROUND - LAVA BELOW ##############################
+############################ MAIN LOGIC - DO NOT MODIFY BELOW #####################################
 ###################################################################################################
 
-# Highway to the DangerZone .
+# Do not modify the below, there be dragons. Modify at your own risk.
 
 logging "info" "--- Start homebrew install log ---"
 /bin/echo "Log file at /Library/Logs/homebrew_install.log"
@@ -272,7 +284,7 @@ if [[ $current_user == "" ]]; then
     logging "info" "Attempting to determine the most common user..."
 
     # Because someone other than the current user was returned we are going to look at who uses
-    # this Mac the most and then set current user to that user.
+    # the this Mac the most and then set current user to that user.
     current_user=$(/usr/sbin/ac -p | /usr/bin/sort -nk 2 | /usr/bin/grep -E -v "total|admin|root|mbsetup|adobe" | /usr/bin/tail -1 | /usr/bin/xargs | /usr/bin/cut -d " " -f1)
 
 fi

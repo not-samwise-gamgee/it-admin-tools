@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.applicationaccess.new</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>disabledAppBundleIDs</key>
+            <array>
+                <string>com.apple.FaceTime</string>
+            </array>
+            <key>allowFaceTime</key>
+            <false/>
+            <key>PayloadIdentifier</key>
+            <string>com.jumpcloud.mdm.policy.facetime.restrictions</string>
+            <key>PayloadUUID</key>
+            <string>B72B82D5-9E2D-4A87-9F6C-D1E13F7DA5E8</string>
+            <key>PayloadDisplayName</key>
+            <string>FaceTime Restrictions</string>
+            <key>PayloadDescription</key>
+            <string>Disables FaceTime application and related features</string>
+            <key>PayloadOrganization</key>
+            <string>JumpCloud</string>
+        </dict>
+    </array>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>com.apple.applicationaccess.new</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadIdentifier</key>
+    <string>com.jumpcloud.mdm.policy.facetime.settings</string>
+    <key>PayloadUUID</key>
+    <string>A4F7B935-E121-4C9E-B2F0-7D68B4D1AC3E</string>
+    <key>PayloadDisplayName</key>
+    <string>Disable FaceTime</string>
+    <key>PayloadDescription</key>
+    <string>Disables FaceTime application and related features</string>
+    <key>PayloadOrganization</key>
+    <string>JumpCloud</string>
+    <key>PayloadRemovalDisallowed</key>
+    <true/>
+    <key>HasRemovalPasscode</key>
+    <true/>
+</dict>
+</plist>

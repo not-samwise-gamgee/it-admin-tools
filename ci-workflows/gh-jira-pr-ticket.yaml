@@ -1,0 +1,103 @@
+name: Report Deployment to Jira
+
+on:
+  workflow_call:
+    inputs:
+      deployed-to-environment:
+        description: "Environment name"
+        required: true
+        type: string
+      repo_name:
+        description: "Repository name triggering the workflow"
+        required: true
+        type: string
+      app_name:
+        description: "Deployed app name"
+        required: true
+        type: string
+      gh_action_url:
+        description: "Source GitHub Action URL"
+        required: true
+        type: string
+      branch_name:
+        description: "Branch name triggering the workflow"
+        required: true
+        type: string
+      deploy_result:
+        description: "Result of the deployment job"
+        required: true
+        type: string
+    secrets:
+      JIRA_OAUTH_CLIENT_ID:
+        description: "Jira OAuth Client ID"
+        required: true
+      JIRA_OAUTH_CLIENT_SECRET:
+        description: "Jira OAuth Client Secret"
+        required: true
+
+jobs:
+  report-deployment-to-jira:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Repository Name Only
+        run: |
+          REPO_NAME=$(basename "${{ inputs.repo_name }}")
+          echo "REPO_NAME=$REPO_NAME" >> "$GITHUB_ENV"
+
+      - name: Obtain OAuth Access Token
+        id: oauth_token
+        run: |
+          RESPONSE=$(curl -s -X POST "https://auth.atlassian.com/oauth/token" \
+            -d "client_id=${{ secrets.JIRA_OAUTH_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.JIRA_OAUTH_CLIENT_SECRET }}" \
+            -d "grant_type=client_credentials" \
+            -d "scope=read:jira-work write:jira-work")
+          OAUTH_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
+          echo "OAUTH_TOKEN=$OAUTH_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Log Deployment in Jira
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ env.OAUTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "fields": {
+                    "project": { "key": "SNP" },
+                    "summary": "created by api via GitHub Actions",
+                    "issuetype": { "id": "10401" },
+                    "customfield_10282": { "value": "${{ inputs.deployed-to-environment }}" },
+                    "customfield_10280": [ "${{ env.REPO_NAME }}" ],
+                    "customfield_10659": [ "${{ inputs.app_name }}" ],
+                    "customfield_10657": "${{ inputs.gh_action_url }}",
+                    "customfield_10689": "${{ inputs.branch_name }}"
+                  }
+                }' \
+            https://[your-org].atlassian.net/rest/api/3/issue)
+          ISSUE_KEY=$(echo "$RESPONSE" | jq -r '.key')
+          echo "ISSUE_KEY=$ISSUE_KEY" >> "$GITHUB_ENV"
+
+      - name: Transition Deployment Jira Ticket to Done
+        if: ${{ inputs.deploy_result == 'success' }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ env.OAUTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "transition": {
+                    "id": "11"
+                  }
+                }' \
+            https://[your-org].atlassian.net/rest/api/3/issue/${{ env.ISSUE_KEY }}/transitions
+
+      - name: Transition Deployment Jira Ticket to Failed
+        if: ${{ inputs.deploy_result != 'success' }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ env.OAUTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                  "transition": {
+                    "id": "21"
+                  }
+                }' \
+            https://[your-org].atlassian.net/rest/api/3/issue/${{ env.ISSUE_KEY }}/transitions

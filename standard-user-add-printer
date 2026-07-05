@@ -1,3 +1,0 @@
-#!/bin/sh
-
-dseditgroup -o edit -t group -a everyone _lpadmin

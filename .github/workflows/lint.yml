@@ -1,0 +1,73 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  shell:
+    name: Shell (shellcheck + parse)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y shellcheck zsh
+      - name: shellcheck (.sh)
+        run: |
+          # Only .sh files; .zsh is handled by the zsh parse step (shellcheck has no zsh dialect)
+          find . -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 -r shellcheck -x
+      - name: parse .zsh
+        run: |
+          find . -name '*.zsh' -not -path './.git/*' -print0 \
+            | while IFS= read -r -d '' f; do zsh -n "$f" || exit 1; done
+
+  powershell:
+    name: PowerShell (PSScriptAnalyzer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          $r = Get-ChildItem -Recurse -Filter *.ps1 |
+            ForEach-Object { Invoke-ScriptAnalyzer -Path $_.FullName -Severity Error }
+          if ($r) { $r | Format-Table; throw "PSScriptAnalyzer found Error-severity issues" }
+
+  python:
+    name: Python (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:
+          args: check
+
+  config:
+    name: Config (xml / json well-formedness)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils jq
+      - name: validate xml / mobileconfig
+        run: |
+          find . \( -name '*.xml' -o -name '*.mobileconfig' \) -not -path './.git/*' -print0 \
+            | while IFS= read -r -d '' f; do xmllint --noout "$f" || exit 1; done
+      - name: validate json
+        run: |
+          find . -name '*.json' -not -path './.git/*' -print0 \
+            | while IFS= read -r -d '' f; do jq empty "$f" || exit 1; done
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

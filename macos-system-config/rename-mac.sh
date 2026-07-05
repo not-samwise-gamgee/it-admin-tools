@@ -1,15 +1,8 @@
-#!/bin/sh
-
-#get user
-getUser=$(ls -l /dev/console | awk '{ print $3 }')
-
-#get hardware model
+#!/bin/bash
+getUser=$(stat -f%Su /dev/console)
 hwIdentifier=$(sysctl -n hw.model)
-
-#get logged in user and match local user to logged in user
-loggedInUser="$(dscl . -read /Users/$getUser RealName | grep -v RealName | xargs)"
-
-#set company name (if you want to display company name in the device name)
+loggedInUser="$(dscl . -read "/Users/$getUser" RealName | grep -v RealName | xargs)"
+# shellcheck disable=SC2034  # placeholder for callers to fold into their naming convention (see note below)
 company="COMPANYNAME"
 
 #variables $loggeInUser $company $hwIdentifier can be removed or changed to suit your device naming convention
@@ -17,7 +10,7 @@ company="COMPANYNAME"
 	if [[ $hwIdentifier =~ "MacBookPro" ]] ; then
 		echo "set name to: $loggedInUser-MBP"
 		scutil --set ComputerName "$loggedInUser-MBP"
-		scutil --set LocalHostName "$lloggedInUser-MBP"
+		scutil --set LocalHostName "$loggedInUser-MBP"
 		scutil --set HostName "$loggedInUser-MBP"
 	elif [[ $hwIdentifier =~ "MacBookAir" ]] ; then
 		echo "set name to: $loggedInUser-MBA"
